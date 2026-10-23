@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ExamPortal - Mock Exam Generator & Assessment Suite</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Alpine.js CDN -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 h-full flex flex-col" x-data="examApp()">
+
+    <!-- TOP NAVIGATION BAR -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-indigo-600 text-white p-2 rounded-xl shadow-md">
+                    <i data-lucide="graduation-cap" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg text-slate-900">ExamPortal Pro</h1>
+                    <p class="text-xs text-slate-500" x-text="isStudentMode ? 'Student Examination Portal' : 'Instructor Administration Panel'"></p>
+                </div>
+            </div>
+
+            <!-- Mode Switcher / Teacher Access Trigger -->
+            <div class="flex items-center space-x-3">
+                <template x-if="!isStudentMode">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xs bg-amber-100 text-amber-800 font-semibold px-2.5 py-1 rounded-full flex items-center gap-1">
+                            <i data-lucide="shield-check" class="w-3.5 h-3.5"></i> Admin Active
+                        </span>
+                        <button @click="switchToStudentView()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1">
+                            <i data-lucide="eye" class="w-3.5 h-3.5"></i> View as Student
+                        </button>
+                    </div>
+                </template>
+
+                <template x-if="isStudentMode">
+                    <button @click="openTeacherLogin()" class="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5">
+                        <i data-lucide="lock" class="w-3.5 h-3.5"></i> Teacher Access
+                    </button>
+                </template>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- ================= STUDENT ASSESSMENT VIEW ================= -->
+        <div x-show="isStudentMode" x-cloak class="space-y-6">
+            
+            <!-- STAGE 1: CANDIDATE REGISTRATION -->
+            <template x-if="studentState === 'register'">
+                <div class="max-w-md mx-auto bg-white rounded-2xl shadow-xl border border-slate-100 p-8 space-y-6 mt-10">
+                    <div class="text-center space-y-2">
+                        <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto">
+                            <i data-lucide="user-check" class="w-6 h-6"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold text-slate-900">Candidate Verification</h2>
+                        <p class="text-sm text-slate-500">Please enter your credentials to begin the assessment.</p>
+                    </div>
+
+                    <form @submit.prevent="startExam()" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Full Name</label>
+                            <input type="text" x-model="candidate.name" required placeholder="e.g. Adebayo Johnson" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Registration / Student ID</label>
+                            <input type="text" x-model="candidate.id" required placeholder="e.g. UTME/2026/099" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Select Subject Mock</label>
+                            <select x-model="selectedSubjectId" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm bg-white">
+                                <template x-for="subj in subjects" :key="subj.id">
+                                    <option :value="subj.id" x-text="subj.name + ' (' + subj.questions.length + ' Questions)'"></option>
+                                </template>
+                            </select>
+                        </div>
+                        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-xl shadow-lg shadow-indigo-200 transition flex items-center justify-center gap-2">
+                            <span>Proceed to Instructions</span>
+                            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        </button>
+                    </form>
+                </div>
+            </template>
+
+            <!-- STAGE 2: INSTRUCTIONS & READY -->
+            <template x-if="studentState === 'instructions'">
+                <div class="max-w-2xl mx-auto bg-white rounded-2xl shadow-xl border border-slate-100 p-8 space-y-6 mt-6">
+                    <div class="border-b border-slate-100 pb-4 flex items-center justify-between">
+                        <div>
+                            <h2 class="text-xl font-bold text-slate-900" x-text="currentSubject.name"></h2>
+                            <p class="text-xs text-slate-500">Candidate: <span class="font-medium text-slate-700" x-text="candidate.name"></span> (<span x-text="candidate.id"></span>)</p>
+                        </div>
+                        <span class="px-3 py-1 bg-indigo-50 text-indigo-700 font-semibold text-xs rounded-full">Timed Assessment</span>
+                    </div>
+
+                    <div class="space-y-4 text-sm text-slate-600">
+                        <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3 text-amber-800">
+                            <i data-lucide="alert-triangle" class="w-5 h-5 flex-shrink-0 text-amber-600"></i>
+                            <div>
+                                <strong class="block font-semibold mb-0.5">Important Exam Guidelines:</strong>
+                                <ul class="list-disc list-inside space-y-1 text-xs">
+                                    <li>Total Questions: <span class="font-bold" x-text="currentSubject.questions.length"></span> items.</li>
+                                    <li>Duration: <span class="font-bold" x-text="currentSubject.durationMinutes"></span> Minutes.</li>
+                                    <li>Do not refresh or close the browser window during the active test session.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                        <button @click="studentState = 'register'" class="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-medium text-sm">Back</button>
+                        <button @click="beginActiveTest()" class="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm shadow-lg shadow-indigo-200 flex items-center gap-2">
+                            <span>Start Examination Now</span>
+                            <i data-lucide="play" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+            </template>
+
+            <!-- STAGE 3: ACTIVE EXAM INTERFACE -->
+            <template x-if="studentState === 'exam'">
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                    <!-- Question Area (3 Cols) -->
+                    <div class="lg:col-span-3 bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8 flex flex-col justify-between min-h-[500px]">
+                        <div>
+                            <!-- Question Header bar -->
+                            <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-6">
+                                <span class="text-xs font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-3 py-1 rounded-lg">
+                                    Question <span x-text="currentIndex + 1"></span> of <span x-text="currentSubject.questions.length"></span>
+                                </span>
+                                <button @click="toggleFlag(currentIndex)" :class="flags[currentIndex] ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-slate-50 text-slate-600 border-slate-200'" class="text-xs font-medium px-3 py-1.5 rounded-lg border flex items-center gap-1.5 transition">
+                                    <i data-lucide="flag" class="w-3.5 h-3.5"></i>
+                                    <span x-text="flags[currentIndex] ? 'Flagged' : 'Flag Question'"></span>
+                                </button>
+                            </div>
+
+                            <!-- Question Prompt -->
+                            <h3 class="text-lg font-semibold text-slate-900 mb-6 leading-relaxed" x-text="currentQuestion.text"></h3>
+
+                            <!-- Options List -->
+                            <div class="space-y-3">
+                                <template x-for="(opt, oIndex) in currentQuestion.options" :key="oIndex">
+                                    <label @click="answers[currentIndex] = opt.key" :class="answers[currentIndex] === opt.key ? 'border-indigo-600 bg-indigo-50/50 text-indigo-950 font-medium' : 'border-slate-200 hover:border-slate-300 text-slate-700'" class="flex items-start p-4 rounded-xl border cursor-pointer transition">
+                                        <input type="radio" :name="'q_' + currentIndex" :value="opt.key" :checked="answers[currentIndex] === opt.key" class="mt-1 mr-3 text-indigo-600 focus:ring-indigo-500">
+                                        <span class="text-sm"><strong class="mr-2" x-text="opt.key + '.'"></strong><span x-text="opt.text"></span></span>
+                                    </label>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- Footer Controls -->
+                        <div class="flex items-center justify-between pt-6 border-t border-slate-100 mt-8">
+                            <button @click="prevQuestion()" :disabled="currentIndex === 0" :class="currentIndex === 0 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-slate-100'" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-medium text-sm transition">
+                                Previous
+                            </button>
+                            <div class="flex gap-2">
+                                <template x-if="currentIndex < currentSubject.questions.length - 1">
+                                    <button @click="nextQuestion()" class="px-6 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm shadow-md transition">
+                                        Next Question
+                                    </button>
+                                </template>
+                                <template x-if="currentIndex === currentSubject.questions.length - 1">
+                                    <button @click="confirmSubmit()" class="px-6 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm shadow-md transition flex items-center gap-1.5">
+                                        <i data-lucide="check-circle" class="w-4 h-4"></i> Submit Exam
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sidebar Timer & Palette (1 Col) -->
+                    <div class="space-y-6">
+                        <!-- Timer Box -->
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 text-center">
+                            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Time Remaining</span>
+                            <div class="text-3xl font-extrabold text-slate-900 mt-1 font-mono" x-text="formattedTime"></div>
+                        </div>
+
+                        <!-- Question Palette Grid -->
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Question Palette</h4>
+                            <div class="grid grid-cols-5 gap-2 max-h-60 overflow-y-auto pr-1">
+                                <template x-for="(q, idx) in currentSubject.questions" :key="idx">
+                                    <button @click="currentIndex = idx" 
+                                        :class="{
+                                            'bg-indigo-600 text-white border-indigo-600': currentIndex === idx,
+                                            'bg-emerald-100 text-emerald-800 border-emerald-300': answers[idx] !== undefined && currentIndex !== idx,
+                                            'bg-amber-100 text-amber-800 border-amber-300': flags[idx] && currentIndex !== idx,
+                                            'bg-slate-50 text-slate-700 border-slate-200': answers[idx] === undefined && !flags[idx] && currentIndex !== idx
+                                        }"
+                                        class="h-9 rounded-lg border text-xs font-bold flex items-center justify-center transition"
+                                        x-text="idx + 1">
+                                    </button>
+                                </template>
+                            </div>
+
+                            <!-- Legend -->
+                            <div class="mt-4 pt-4 border-t border-slate-100 space-y-2 text-xs text-slate-500">
+                                <div class="flex items-center justify-between"><span>Answered</span><span class="w-3 h-3 rounded bg-emerald-200 inline-block"></span></div>
+                                <div class="flex items-center justify-between"><span>Flagged</span><span class="w-3 h-3 rounded bg-amber-200 inline-block"></span></div>
+                                <div class="flex items-center justify-between"><span>Unanswered</span><span class="w-3 h-3 rounded bg-slate-100 inline-block"></span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            <!-- STAGE 4: RESULT SCORECARD -->
+            <template x-if="studentState === 'result'">
+                <div class="max-w-2xl mx-auto bg-white rounded-2xl shadow-xl border border-slate-100 p-8 space-y-6 mt-6">
+                    <div class="text-center space-y-2">
+                        <div class="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
+                            <i data-lucide="award" class="w-8 h-8"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold text-slate-900">Assessment Completed</h2>
+                        <p class="text-sm text-slate-500">Here is your official evaluation performance summary.</p>
+                    </div>
+
+                    <div class="bg-slate-50 rounded-2xl p-6 border border-slate-100 grid grid-cols-3 gap-4 text-center">
+                        <div>
+                            <span class="text-xs text-slate-400 font-semibold uppercase">Candidate</span>
+                            <p class="text-sm font-bold text-slate-800 mt-1 truncate" x-text="candidate.name"></p>
+                        </div>
+                        <div>
+                            <span class="text-xs text-slate-400 font-semibold uppercase">Score</span>
+                            <p class="text-xl font-extrabold text-indigo-600 mt-1"><span x-text="scoreResult.score"></span> / <span x-text="scoreResult.total"></span></p>
+                        </div>
+                        <div>
+                            <span class="text-xs text-slate-400 font-semibold uppercase">Percentage</span>
+                            <p class="text-xl font-extrabold text-emerald-600 mt-1" x-text="scoreResult.percentage + '%'"></p>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-center gap-3 pt-4">
+                        <button @click="resetExamSession()" class="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm shadow-md transition">
+                            Take Another Test
+                        </button>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+
+        <!-- ================= TEACHER / ADMIN PANEL ================= -->
+        <div x-show="!isStudentMode" x-cloak class="space-y-8">
+            
+            <!-- Dashboard Banner & Actions -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900">Instructor Control Center</h2>
+                    <p class="text-xs text-slate-500 mt-0.5">Manage subjects, configure mock test question allocations up to 180 questions, and generate student access links.</p>
+                </div>
+                <div class="flex items-center gap-3 w-full sm:w-auto">
+                    <button @click="openLinkModal()" class="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium text-xs transition flex items-center justify-center gap-1.5 border border-indigo-200">
+                        <i data-lucide="link" class="w-4 h-4"></i> Generate Student Link
+                    </button>
+                    <button @click="openAddSubjectModal()" class="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs shadow-md transition flex items-center justify-center gap-1.5">
+                        <i data-lucide="plus-circle" class="w-4 h-4"></i> Create New Subject
+                    </button>
+                </div>
+            </div>
+
+            <!-- Subject Cards Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <template x-for="subj in subjects" :key="subj.id">
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between space-y-4">
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg" x-text="'Subject ID: ' + subj.id"></span>
+                                <button @click="deleteSubject(subj.id)" class="text-slate-400 hover:text-rose-600 transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                            </div>
+                            <h3 class="text-lg font-bold text-slate-900" x-text="subj.name"></h3>
+                            <p class="text-xs text-slate-500 mt-1" x-text="subj.description"></p>
+                        </div>
+
+                        <div class="space-y-3 pt-4 border-t border-slate-100">
+                            <div class="flex items-center justify-between text-xs text-slate-600">
+                                <span>Loaded Questions:</span>
+                                <span class="font-bold text-slate-900" x-text="subj.questions.length + ' items'"></span>
+                            </div>
+                            <div class="flex items-center justify-between text-xs text-slate-600">
+                                <span>Duration Limit:</span>
+                                <span class="font-bold text-slate-900" x-text="subj.durationMinutes + ' mins'"></span>
+                            </div>
+                            <button @click="openSubjectEditor(subj)" class="w-full py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs transition flex items-center justify-center gap-1">
+                                <i data-lucide="sliders" class="w-3.5 h-3.5"></i> Configure & Manage Questions (Max 180)
+                            </button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+    </main>
+
+
+    <!-- ================= MODALS ================= -->
+
+    <!-- Teacher PIN Login Modal -->
+    <div x-show="showLoginModal" x-cloak class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="font-bold text-slate-900 text-base">Instructor PIN Login</h3>
+                <button @click="showLoginModal = false" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <p class="text-xs text-slate-500">Enter your instructor PIN (Default is <code class="bg-slate-100 px-1 py-0.5 rounded text-indigo-600 font-bold">1234</code>) to access configuration.</p>
+            <form @submit.prevent="verifyPin()" class="space-y-3">
+                <input type="password" x-model="enteredPin" placeholder="Enter 4-digit PIN" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm text-center font-mono tracking-widest" required>
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-xl text-xs transition shadow-md">Authenticate</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Student Link Generator Modal -->
+    <div x-show="showLinkModal" x-cloak class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="font-bold text-slate-900 text-base">Student Direct Exam Link</h3>
+                <button @click="showLinkModal = false" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <p class="text-xs text-slate-500">Share this direct link with your students. It will lock the app into Student Answer-Only mode instantly.</p>
+            <div class="flex items-center gap-2">
+                <input type="text" readonly :value="studentShareLink" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-600 select-all">
+                <button @click="copyLink()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-medium transition flex-shrink-0">Copy</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ALPINE APP SCRIPT -->
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('examApp', () => ({
+                isStudentMode: true,
+                showLoginModal: false,
+                showLinkModal: false,
+                enteredPin: '',
+                studentShareLink: window.location.origin + window.location.pathname + '?mode=student',
+
+                // Student States: 'register' | 'instructions' | 'exam' | 'result'
+                studentState: 'register',
+                selectedSubjectId: 'english',
+                candidate: { name: '', id: '' },
+                currentIndex: 0,
+                answers: {},
+                flags: {},
+                timerSeconds: 1800,
+                timerInterval: null,
+                scoreResult: { score: 0, total: 0, percentage: 0 },
+
+                // Default Subject Bank (Up to 180 capacity support)
+                subjects: [
+                    {
+                        id: 'english',
+                        name: 'English Language - Nouns & Number',
+                        description: 'Grammar structure, number agreement, and concord test bank.',
+                        durationMinutes: 30,
+                        questions: [
+                            { text: 'My uncle is one of the ___ of the society', options: [{key:'a', text:'elite'}, {key:'b', text:'elites'}, {key:'c', text:'elities'}, {key:'d', text:'elit'}], answer:'b' },
+                            { text: 'Some people think that all ___ is a nuisance', options: [{key:'a', text:'parent-in-law'}, {key:'b', text:'parents-in-law'}, {key:'c', text:'parent-in-laws'}, {key:'d', text:'parents-in-laws'}], answer:'b' },
+                            { text: 'The meeting of ___ will come late today', options: [{key:'a', text:'secretaries general'}, {key:'b', text:'secretary general'}, {key:'c', text:'secretary generals'}, {key:'d', text:'secretaries generals'}], answer:'a' }
+                        ]
+                    },
+                    {
+                        id: 'physics',
+                        name: 'Physics - Measurement & Vectors',
+                        description: 'SI units, vernier calipers, micrometer screw gauge, and vector quantities.',
+                        durationMinutes: 30,
+                        questions: [
+                            { text: 'SI system agreed internationally are', options: [{key:'A', text:'lb,ft,sec'}, {key:'B', text:'g,m,sec'}, {key:'C', text:'kg,m,sec'}, {key:'D', text:'cm,g,sec'}], answer:'C' },
+                            { text: 'To determine weight you could use', options: [{key:'A', text:'beam balance'}, {key:'B', text:'spring balance'}, {key:'C', text:'chemical balance'}, {key:'D', text:'metre rule'}], answer:'B' },
+                            { text: 'Which is NOT a vector quantity?', options: [{key:'A', text:'Velocity'}, {key:'B', text:'Work'}, {key:'C', text:'Force'}, {key:'D', text:'Electric field'}], answer:'B' }
+                        ]
+                    }
+                ],
+
+                init() {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    if (urlParams.get('mode') === 'student') {
+                        this.isStudentMode = true;
+                    } else if (urlParams.get('mode') === 'admin') {
+                        this.isStudentMode = false;
+                    }
+                    lucide.createIcons();
+                },
+
+                get currentSubject() {
+                    return this.subjects.find(s => s.id === this.selectedSubjectId) || this.subjects[0];
+                },
+
+                get currentQuestion() {
+                    return this.currentSubject.questions[this.currentIndex] || {};
+                },
+
+                get formattedTime() {
+                    let m = Math.floor(this.timerSeconds / 60);
+                    let s = this.timerSeconds % 60;
+                    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+                },
+
+                switchToStudentView() {
+                    this.isStudentMode = true;
+                    this.studentState = 'register';
+                },
+
+                openTeacherLogin() {
+                    this.enteredPin = '';
+                    this.showLoginModal = true;
+                },
+
+                verifyPin() {
+                    if (this.enteredPin === '1234') {
+                        this.isStudentMode = false;
+                        this.showLoginModal = false;
+                    } else {
+                        alert('Incorrect PIN. Default PIN is 1234');
+                    }
+                },
+
+                openLinkModal() {
+                    this.showLinkModal = true;
+                },
+
+                copyLink() {
+                    navigator.clipboard.writeText(this.studentShareLink);
+                    alert('Student direct link copied to clipboard!');
+                },
+
+                startExam() {
+                    if (!this.candidate.name || !this.candidate.id) {
+                        alert('Please enter your full name and student ID.');
+                        return;
+                    }
+                    this.studentState = 'instructions';
+                },
+
+                beginActiveTest() {
+                    this.studentState = 'exam';
+                    this.currentIndex = 0;
+                    this.answers = {};
+                    this.flags = {};
+                    this.timerSeconds = this.currentSubject.durationMinutes * 60;
+                    
+                    if (this.timerInterval) clearInterval(this.timerInterval);
+                    this.timerInterval = setInterval(() => {
+                        if (this.timerSeconds > 0) {
+                            this.timerSeconds--;
+                        } else {
+                            clearInterval(this.timerInterval);
+                            this.autoSubmitExam();
+                        }
+                    }, 1000);
+                },
+
+                nextQuestion() {
+                    if (this.currentIndex < this.currentSubject.questions.length - 1) {
+                        this.currentIndex++;
+                    }
+                },
+
+                prevQuestion() {
+                    if (this.currentIndex > 0) {
+                        this.currentIndex--;
+                    }
+                },
+
+                toggleFlag(idx) {
+                    this.flags[idx] = !this.flags[idx];
+                },
+
+                confirmSubmit() {
+                    if (confirm('Are you sure you want to submit your assessment?')) {
+                        this.autoSubmitExam();
+                    }
+                },
+
+                autoSubmitExam() {
+                    if (this.timerInterval) clearInterval(this.timerInterval);
+                    let correctCount = 0;
+                    let totalQ = this.currentSubject.questions.length;
+
+                    this.currentSubject.questions.forEach((q, idx) => {
+                        if (this.answers[idx] === q.answer) {
+                            correctCount++;
+                        }
+                    });
+
+                    this.scoreResult = {
+                        score: correctCount,
+                        total: totalQ,
+                        percentage: Math.round((correctCount / totalQ) * 100)
+                    };
+
+                    this.studentState = 'result';
+                },
+
+                resetExamSession() {
+                    this.candidate = { name: '', id: '' };
+                    this.studentState = 'register';
+                },
+
+                deleteSubject(id) {
+                    if (confirm('Delete this subject and its question bank?')) {
+                        this.subjects = this.subjects.filter(s => s.id !== id);
+                    }
+                },
+
+                openAddSubjectModal() {
+                    let name = prompt('Enter New Subject Name (e.g. Mathematics):');
+                    if (!name) return;
+                    let id = name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+                    this.subjects.push({
+                        id: id,
+                        name: name,
+                        description: 'Custom instructor-created assessment mock.',
+                        durationMinutes: 30,
+                        questions: [
+                            { text: 'Sample Question 1 for ' + name + '?', options: [{key:'A', text:'Option One'}, {key:'B', text:'Option Two'}], answer:'A' }
+                        ]
+                    });
+                },
+
+                openSubjectEditor(subj) {
+                    alert('Subject: ' + subj.name + '\nCurrently contains ' + subj.questions.length + ' questions. (Up to 180 supported).');
+                }
+            }));
+        });
+    </script>
+</body>
+</html>
